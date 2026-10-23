@@ -109,7 +109,7 @@ code, .mono { font-family: var(--font-mono); font-size: .92em; }
 .st.ko { background: var(--ko-bg); color: var(--ko); }
 .st.unk { background: var(--unk-bg); color: var(--unk); }
 .st::before { font-family: var(--font-mono); }
-.st.ok::before { content: "✓"; } .st.ko::before { content: "✕"; } .st.unk::before { content: "?"; }
+.st.ok::before { content: "✓"; } .st.prelim { background: var(--accent-soft); color: var(--accent); } .st.ok.prelim::before { content: "≈"; } .st.ko::before { content: "✕"; } .st.unk::before { content: "?"; }
 .note { border-left: 3px solid var(--unk); background: var(--unk-bg); padding: 10px 12px; border-radius: 0 6px 6px 0; color: var(--ink); font-size: 13px; }
 .note.info { border-color: var(--accent); background: var(--accent-soft); }
 .note.ko { border-color: var(--ko); background: var(--ko-bg); }
@@ -327,4 +327,8 @@ pre.code { background: var(--surface3); border: 1px solid var(--line); border-ra
 <script src="js/app.js"></script>
 <script src="js/pages.js"></script>
 <script src="js/pages2.js"></script>
-<script>SG.start();</script>
+<script src="data/products.js"></script>
+<script src="data/extract.js"></script>
+<script src="js/project.js"></script>
+<script src="js/pages3.js"></script>
+<script>SG.syncProj(); SG.start();</script>

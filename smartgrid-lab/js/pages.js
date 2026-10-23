@@ -190,17 +190,18 @@ SG.FORM = [
     ['pyrOut', 'Ngõ ra cảm biến bức xạ', 'sel', '', [['4-20', '4–20 mA'], ['0-10', '0–10 V']]], ['aiPyrCh', 'Cấu hình kênh AI', 'sel', '', [['4-20', '4–20 mA'], ['0-10', '0–10 V']]], ['psuA', 'Dòng định mức PSU 24 V', 'num', 'A'], ['spare', 'Dự phòng I/O', 'num', '%']]]
 ];
 SG.render.selector = function (el) {
-  el.innerHTML = SG.head('Chọn thiết bị và kiểm tra tương thích', 'Thay đổi thông số — xem yêu cầu, I/O, phụ kiện thiếu và điểm chưa đủ dữ liệu',
-    'Mọi thay đổi được lưu trong trình duyệt và cập nhật sơ đồ, BOM, bảng I/O, HMI. Dòng điện chỉ là tính SƠ BỘ: không kết luận máy cắt hay tiết diện cáp đã phù hợp.') + `
+  el.innerHTML = `<div class="note small">Cấu hình chức năng của kiến trúc (vận hành đảo, máy phát, truyền thông, ghép nối…). Các ô bị khóa lấy giá trị từ tab <b>Thiết bị đầu vào</b>. Dòng điện chỉ là tính SƠ BỘ: không kết luận máy cắt hay tiết diện cáp đã phù hợp.</div>
   <div class="grid" style="grid-template-columns:minmax(0,380px) minmax(0,1fr);align-items:start" id="sel-grid">
     <div class="stack" id="sel-form"></div><div class="stack" id="sel-res" style="gap:14px"></div></div>`;
   if (window.innerWidth < 1000) el.querySelector('#sel-grid').style.gridTemplateColumns = '1fr';
   const form = el.querySelector('#sel-form');
   form.innerHTML = `<div class="row"><button class="btn" id="sel-reset">Khôi phục cấu hình tham chiếu</button></div>` + SG.FORM.map(([g, fs], gi) => `<details class="card" ${gi < 2 || gi === 5 ? 'open' : ''}><summary>${g}</summary><div class="grid g2" style="margin-top:10px">${fs.map(([k, n, t, u, opts]) => {
     const v = SG.cfg[k];
-    if (t === 'chk') return `<label class="cb" style="grid-column:1/-1"><input type="checkbox" id="f-${k}" data-k="${k}" ${v ? 'checked' : ''}> ${n}</label>`;
-    if (t === 'sel') return `<label class="f">${n}<select id="f-${k}" data-k="${k}">${opts.map(o => `<option value="${o[0]}" ${String(o[0]) === String(v) ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></label>`;
-    return `<label class="f">${n}${u ? ' (' + u + ')' : ''}<input type="number" step="any" id="f-${k}" data-k="${k}" value="${v == null ? '' : v}"></label>`;
+    const lk0 = SG.SYNCED && SG.SYNCED.includes(k) ? ' disabled title="Lấy từ tab Thiết bị đầu vào"' : '';
+    if (t === 'chk') return `<label class="cb" style="grid-column:1/-1"><input type="checkbox" id="f-${k}" data-k="${k}" ${v ? 'checked' : ''}${lk0}> ${n}</label>`;
+    if (t === 'sel') return `<label class="f">${n}<select id="f-${k}" data-k="${k}"${lk0}>${opts.map(o => `<option value="${o[0]}" ${String(o[0]) === String(v) ? 'selected' : ''}>${o[1]}</option>`).join('')}</select></label>`;
+    const lk = SG.SYNCED && SG.SYNCED.includes(k) ? ' disabled title="Lấy từ tab Thiết bị đầu vào"' : '';
+    return `<label class="f">${n}${u ? ' (' + u + ')' : ''}<input type="number" step="any" id="f-${k}" data-k="${k}" value="${v == null ? '' : v}"${lk}></label>`;
   }).join('')}</div></details>`).join('');
   form.querySelectorAll('[data-k]').forEach(inp => inp.onchange = () => {
     const k = inp.dataset.k; let v;
@@ -210,7 +211,7 @@ SG.render.selector = function (el) {
     if (k === 'rlSteps' && v != null) v = Math.max(1, Math.min(6, Math.round(v)));
     SG.cfg[k] = v; SG.saveCfg(); results();
   });
-  form.querySelector('#sel-reset').onclick = () => { SG.cfg = Object.assign({}, SG.defaultCfg); SG.saveCfg(); SG.render.selector(el); };
+  form.querySelector('#sel-reset').onclick = () => { SG.cfg = Object.assign({}, SG.defaultCfg); SG.syncProj(); SG.renderSys(el); };
   results();
   function results() {
     const c = SG.cfg, r = SG.r, ck = SG.checks(c, r), res = el.querySelector('#sel-res');
