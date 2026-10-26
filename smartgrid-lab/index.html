@@ -67,7 +67,7 @@ code, .mono { font-family: var(--font-mono); font-size: .92em; }
 .main { min-width: 0; display: flex; flex-direction: column; }
 .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; gap: 12px; align-items: center; padding: 10px 24px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .search { position: relative; flex: 1 1 260px; max-width: 460px; }
-.search input { width: 100%; padding: 7px 12px 7px 32px; border: 1px solid var(--line2); border-radius: 7px; background: var(--surface); }
+.search input, .search input[type=text] { width: 100%; padding: 7px 12px 7px 32px; border: 1px solid var(--line2); border-radius: 7px; background: var(--surface); }
 .search svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink3); }
 .sres { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--line2); border-radius: 8px; box-shadow: var(--shadow); max-height: 60vh; overflow: auto; z-index: 40; }
 .sres button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 7px 12px; cursor: pointer; }
@@ -221,6 +221,7 @@ svg.dg.panning { cursor: grabbing; }
 .lib-list button:hover { background: var(--surface2); }
 .lib-list button.on { background: var(--accent-soft); }
 .lib-list .id { font: 600 11.5px var(--font-mono); }
+.lib-list button > span:nth-child(2), .scen-list button > span:nth-child(2) { overflow-wrap: anywhere; }
 .lib-list .gh { font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink3); padding: 10px 8px 4px; font-weight: 600; }
 
 /* ---- HMI */
@@ -273,7 +274,11 @@ pre.code { background: var(--surface3); border: 1px solid var(--line); border-ra
 .question-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
 .question-list div { border: 1px solid var(--line); border-radius: 7px; padding: 10px; background: var(--surface); font-size: 13px; }
 .question-list b { display: block; font-size: 12px; color: var(--accent); letter-spacing: .04em; }
-@media (max-width: 1100px) { .dg-wrap { grid-template-columns: 1fr; } .dg-side { border-left: 0; border-top: 1px solid var(--line); max-height: none; } .lib { grid-template-columns: 1fr; } .lib-list { position: static; max-height: 300px; } .overview-hero { grid-template-columns: 1fr; } .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.seg.lang button { font-weight: 600; min-width: 38px; }
+.bi-pick { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink2); }
+.bi-pick select { width: auto; padding: 4px 6px; }
+.bi { color: var(--ink3); font-size: .9em; font-style: italic; }
+@media (max-width: 1100px) { .dg-wrap { grid-template-columns: 1fr; } .dg-side { border-left: 0; border-top: 1px solid var(--line); max-height: none; } .lib { grid-template-columns: 1fr; } .lib-list { position: static; max-height: 300px; } .overview-hero { grid-template-columns: minmax(0, 1fr); } .g4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 760px) {
   .app { grid-template-columns: 1fr; }
   .side { position: static; height: auto; flex-direction: column; padding: 10px 16px; }
@@ -282,6 +287,9 @@ pre.code { background: var(--surface3); border: 1px solid var(--line); border-ra
   .side-foot { display: none; }
   .top { padding: 8px 16px; position: static; }
   .page { padding: 16px 16px 40px; }
+  .st, .chip { white-space: normal; }
+  #sc-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .seg { flex-wrap: wrap; max-width: 100%; }
   .g2, .g3, .g4, .layers4 { grid-template-columns: 1fr; }
   .layers4 > div { border-right: 0; border-bottom: 1px solid var(--line); }
   .qa, .kv { grid-template-columns: 1fr; }
@@ -295,26 +303,38 @@ pre.code { background: var(--surface3); border: 1px solid var(--line); border-ra
   <aside class="side">
     <div class="brand">
       <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect x="1" y="1" width="28" height="28" rx="6" fill="var(--accent)"/><path d="M6 20h18M9 20v-6M15 20V9M21 20v-9M9 14l6-5 6 2" stroke="var(--accent-ink)" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
-      <div><b>Smart Grid Lab</b><span>Microgrid hạ áp · phòng 80 m²</span></div>
+      <div><b>Smart Grid Lab</b><span id="brand-sub"></span></div>
     </div>
     <nav class="nav" id="nav"></nav>
-    <div class="side-foot">Mô phỏng học tập. Không kết nối, không điều khiển thiết bị điện thật. Không phải hồ sơ thiết kế đã phê duyệt.</div>
+    <div class="side-foot" id="side-foot"></div>
   </aside>
   <div class="main">
     <header class="top">
       <div class="search">
         <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.8" fill="none"/><path d="M11 11l4 4" stroke="currentColor" stroke-width="1.8"/></svg>
-        <input id="q" type="text" placeholder="Tìm thiết bị, thuật ngữ, tín hiệu… (ví dụ: QF0, contacteur, SOC)" autocomplete="off" aria-label="Tìm kiếm">
+        <input id="q" type="text" autocomplete="off">
         <div class="sres" id="sres" hidden></div>
       </div>
-      <div class="seg" role="group" aria-label="Mức chi tiết"><button id="m-basic">Cơ bản</button><button id="m-detail">Chi tiết</button></div>
-      <span class="sim-chip">Mô phỏng · giả định cần kiểm chứng</span>
+      <div class="seg lang" role="group" id="lang-group"><button data-lang="vi" lang="vi">VI</button><button data-lang="en" lang="en">EN</button><button data-lang="fr" lang="fr">FR</button></div>
+      <label class="bi-pick"><span id="bi-label"></span><select id="bi-sel"></select></label>
+      <div class="seg" role="group" id="lvl-group"><button id="m-basic"></button><button id="m-detail"></button></div>
+      <span class="sim-chip" id="sim-chip"></span>
     </header>
     <main class="page" id="page"></main>
   </div>
 </div>
 <div class="tip" id="tip" hidden></div>
 
+<script src="js/i18n.js"></script>
+<script src="i18n/vi/core.js"></script>
+<script src="i18n/vi/pages.js"></script>
+<script src="i18n/vi/logic.js"></script>
+<script src="i18n/en/core.js"></script>
+<script src="i18n/en/pages.js"></script>
+<script src="i18n/en/logic.js"></script>
+<script src="i18n/fr/core.js"></script>
+<script src="i18n/fr/pages.js"></script>
+<script src="i18n/fr/logic.js"></script>
 <script src="data/glossary.js"></script>
 <script src="data/types.js"></script>
 <script src="data/devices.js"></script>
@@ -331,4 +351,12 @@ pre.code { background: var(--surface3); border: 1px solid var(--line); border-ra
 <script src="data/extract.js"></script>
 <script src="js/project.js"></script>
 <script src="js/pages3.js"></script>
-<script>SG.syncProj(); SG.start();</script>
+<script src="i18n/en/data-glossary.js"></script>
+<script src="i18n/en/data-types.js"></script>
+<script src="i18n/en/data-devices.js"></script>
+<script src="i18n/en/data-misc.js"></script>
+<script src="i18n/fr/data-glossary.js"></script>
+<script src="i18n/fr/data-types.js"></script>
+<script src="i18n/fr/data-devices.js"></script>
+<script src="i18n/fr/data-misc.js"></script>
+<script>SG.snapI18n(); SG.applyI18n(); SG.r = SG.calc(SG.cfg); SG.syncProj(); SG.start();</script>

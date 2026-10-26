@@ -2,7 +2,7 @@
    ph: 0 Điều kiện, 1 Phát hiện, 2 Truyền tín hiệu, 3 Quyết định, 4 Tác động, 5 Phản hồi, 6 HMI.
    s: thay đổi trạng thái mô phỏng (SG.sim.solve tính lại cân bằng công suất ở mỗi bước).
    lock(c): trả về lý do khóa nếu kiến trúc hiện tại không đủ điều kiện. */
-SG.phases = ['Điều kiện', 'Phát hiện', 'Truyền tín hiệu', 'Quyết định', 'Tác động', 'Phản hồi xác nhận', 'Hiển thị HMI'];
+SG.phaseName = i => SG.t('ph.' + i);
 
 SG.scenarios = [
 { id: 'pv-surplus', n: 'PV cấp tải, phần dư sạc pin', base: { irr: 0.85, soc: 55, rlOn: 1, m1Run: false, evOn: false, auto: false, batSet: 0 },
@@ -112,15 +112,15 @@ NẾU COMM_LOST[INV] VÀ cần giới hạn PV: (dựa vào fallback của inver
     { ph: 1, v: 'island', t: 'Relay tách lưới thấy U/f ngoài ngưỡng trong vài trăm ms (theo cài đặt quy định).', hl: ['RLY-DEC', 'm-dec'] },
     { ph: 1, v: 'blackout', t: 'Inverter PV và PCS (grid-following) phát hiện mất lưới bằng chức năng chống tách đảo và ngừng phát. Thanh cái mất điện.', hl: ['PV-INV', 'PCS'], s: { mode: 'BLACKOUT' } },
     { ph: 2, v: 'island', t: 'Relay ra lệnh TRỰC TIẾP (dây) mở KM-PCC, đồng thời báo DEC_TRIP về PLC. PLC vẫn sống nhờ UPS.', hl: ['c-dec-pcc', 'KM-PCC', 'd-dec', 'DI', 'UPS'] },
-    { ph: 2, v: 'blackout', t: c => c.ups ? 'PLC còn sống nhờ UPS và đọc DI/đồng hồ: không có điện áp.' : 'Không có UPS: PLC, HMI, switch cũng mất nguồn — hệ thống không còn điều khiển.', hl: ['PSU', 'CPU'] },
+    { ph: 2, v: 'blackout', t: c => SG.t(c.ups ? 'scf.gl2ups' : 'scf.gl2noups'), hl: ['PSU', 'CPU'] },
     { ph: 3, v: 'island', t: 'PCS (grid-forming) chuyển sang tạo U/f. PLC: chế độ ĐẢO → giới hạn tải theo P_PCS: cắt EV và bậc tải điện trở; kiểm tra P_M1 + P_ưu tiên ≤ P_PCS.', hl: ['PCS', 'CPU'], s: { mode: 'ISLAND', evOn: false, rlOn: 0 } },
-    { ph: 3, v: 'blackout', t: c => c.gen ? 'PLC (nếu có UPS) có thể khởi động máy phát — xem kịch bản 8.' : (!c.pcsGF ? 'Không thể vận hành đảo: PCS grid-following không tạo được lưới.' : (!c.island ? 'Chức năng đảo không được chọn (thiếu KM-PCC/relay tách lưới).' : 'Thiếu UPS cho điều khiển và relay tách lưới.')), hl: ['CPU'] },
+    { ph: 3, v: 'blackout', t: c => SG.t(c.gen ? 'scf.gl3gen' : !c.pcsGF ? 'scf.gl3gfl' : !c.island ? 'scf.gl3noisl' : 'scf.gl3noups'), hl: ['CPU'] },
     { ph: 4, v: 'island', t: 'Inverter PV thấy lưới (do PCS tạo) ổn định → kết nối lại sau trễ của nó; PCS cân bằng: P_PCS = P_tải − P_PV. PV dư → PCS tăng tần số nhẹ để inverter tự giảm công suất (P(f)) — cần kiểm tra cặp thiết bị hỗ trợ.', hl: ['PV-INV', 'PCS'] },
     { ph: 4, v: 'blackout', t: 'Không có tác động công suất: chờ lưới về.', hl: [] },
     { ph: 5, v: 'island', t: 'KM_PCC_FB = 0 xác nhận đã tách; PCS báo chế độ “grid-forming”; U, f đo bởi PCS.', hl: ['d-kmpcc', 'PCS'] },
     { ph: 5, v: 'blackout', t: 'Không có phản hồi — tải không được cấp.', hl: [] },
     { ph: 6, v: 'island', t: 'HMI: đèn “ĐẢO”, báo “Mất lưới — vận hành đảo”, SOC giảm dần, thời gian còn lại ước tính.', hl: ['HMI', 'OP'] },
-    { ph: 6, v: 'blackout', t: c => c.ups ? 'HMI (trên UPS): “Mất lưới — hệ thống dừng”.' : 'HMI tắt. Sau khi có điện lại, nhật ký có thể thiếu thông tin.', hl: ['HMI'] }
+    { ph: 6, v: 'blackout', t: c => SG.t(c.ups ? 'scf.gl6ups' : 'scf.gl6noups'), hl: ['HMI'] }
   ],
   pseudo: `[Bảo vệ, không qua PLC] RLY_DEC: NẾU U/f ngoài ngưỡng > t: mở KM_PCC
 [PLC] KHI DEC_TRIP:
@@ -129,15 +129,15 @@ NẾU COMM_LOST[INV] VÀ cần giới hạn PV: (dựa vào fallback của inver
   NẾU P_UU_TIEN + P_M1 > P_PCS: dung M1
   PCS tự chuyển grid-forming (theo cấu hình của PCS)`
 },
-{ id: 'genstart', n: 'Khởi động máy phát và chuyển nguồn', lock: c => !c.gen ? 'Cấu hình hiện tại không có máy phát (bật ở trang “Chọn thiết bị”).' : (!c.ups ? 'Không có UPS: khi mất lưới PLC mất nguồn nên không thể ra lệnh khởi động/đóng KM-GEN.' : null),
+{ id: 'genstart', n: 'Khởi động máy phát và chuyển nguồn', lock: c => !c.gen ? SG.t('scf.lockNoGen') : (!c.ups ? SG.t('scf.lockNoUps') : null),
   base: { mode: 'ISLAND', irr: 0.1, soc: 25, rlOn: 0, m1Run: false, evOn: false, auto: true }, variant: c => (c.island && c.pcsGF) ? 'fromisland' : 'fromblackout',
   steps: [
     { ph: 0, v: 'fromisland', t: 'Đang đảo, trời tối, SOC giảm tới SOC min + 5 %.', hl: ['BAT', 'PCS'] },
     { ph: 0, v: 'fromblackout', t: 'Mất lưới, thanh cái không có điện (không có chức năng đảo). PLC sống nhờ UPS.', hl: ['GRID', 'UPS'], s: { mode: 'BLACKOUT' } },
     { ph: 1, t: 'PLC phát hiện điều kiện (SOC thấp hoặc mất lưới > 5 s).', hl: ['CPU'] },
     { ph: 2, t: 'DO GEN_START → KA3 → tiếp điểm khô vào bộ điều khiển máy phát.', hl: ['c-do-ka', 'KA', 'c-ka-gstart', 'GEN-CTRL'] },
-    { ph: 3, t: c => 'Máy phát khởi động, ổn định U/f → GEN_READY = 1. PLC kiểm tra khóa liên động: KM_PCC_FB = 0. ' + (c.genSync ? 'Có bộ đồng bộ (giả định): có thể đóng KM-GEN vào thanh cái đang có điện sau khi khớp U, f, góc pha.' : 'KHÔNG có đồng bộ: KHÔNG được đóng máy phát vào thanh cái đang được PCS cấp điện → phải chuyển có gián đoạn.'), hl: ['d-gen', 'DI', 'd-kmpcc'] },
-    { ph: 4, t: c => c.genSync ? 'Đồng bộ → đóng KM-GEN; PCS chuyển grid-following và sạc pin.' : 'PCS ngừng tạo lưới (thanh cái mất điện ~1–2 s) → đóng KM-GEN trên thanh cái chết → PCS khởi động lại ở grid-following, sạc pin.', hl: ['c-ka-gen', 'KM-GEN', 'PCS'], s: { mode: 'GEN' } },
+    { ph: 3, t: c => SG.t('scf.gs3') + ' ' + SG.t(c.genSync ? 'scf.gs3sync' : 'scf.gs3nosync'), hl: ['d-gen', 'DI', 'd-kmpcc'] },
+    { ph: 4, t: c => SG.t(c.genSync ? 'scf.gs4sync' : 'scf.gs4nosync'), hl: ['c-ka-gen', 'KM-GEN', 'PCS'], s: { mode: 'GEN' } },
     { ph: 5, t: 'KM_GEN_FB = 1; GEN_DATA (RS485) báo P, U, f. PLC giới hạn PV để máy phát không dưới tải tối thiểu và không bị công suất ngược.', hl: ['d-kmgen', 'GEN-CTRL', 'PV-INV'] },
     { ph: 6, t: 'HMI: “Đang chạy máy phát”, giờ chạy, mức nhiên liệu (nếu có).', hl: ['HMI'] }
   ],
@@ -152,10 +152,10 @@ KHÓA: KM_GEN và KM_PCC không bao giờ = 1 cùng lúc (cơ khí + điện + P
 { id: 'gridback', n: 'Lưới phục hồi', base: { mode: 'ISLAND', irr: 0.5, soc: 50, rlOn: 0, auto: true },
   steps: [
     { ph: 0, t: 'Điện áp lưới trở lại phía lưới của KM-PCC.', hl: ['GRID'] },
-    { ph: 1, t: c => c.island ? 'Relay tách lưới đo U/f phía lưới trong ngưỡng liên tục trong thời gian chờ (theo quy định — ví dụ vài chục giây đến vài phút, cần kiểm chứng).' : 'Đồng hồ PCC đo lại điện áp.', hl: ['RLY-DEC', 'm-dec', 'PM-PCC'] },
+    { ph: 1, t: c => SG.t(c.island ? 'scf.gb1isl' : 'scf.gb1pm'), hl: ['RLY-DEC', 'm-dec', 'PM-PCC'] },
     { ph: 2, t: 'DEC_TRIP trở về bình thường → PLC.', hl: ['d-dec', 'DI'] },
-    { ph: 3, t: c => c.pcsResync ? 'PCS hỗ trợ đồng bộ lại (giả định): PCS điều chỉnh U/f/góc pha khớp lưới rồi cho phép đóng KM-PCC — không gián đoạn.' : 'PCS không đồng bộ lại được (hoặc chưa xác minh) → chuyển có gián đoạn: dừng PCS, thanh cái chết, đóng KM-PCC, PCS khởi động lại grid-following.', hl: ['PCS', 'CPU'] },
-    { ph: 4, t: c => c.gen ? 'Nếu đang chạy máy phát: mở KM-GEN → kiểm tra KM_GEN_FB = 0 → đóng KM-PCC → máy phát chạy làm mát rồi dừng.' : 'PLC đóng KM-PCC qua KA1.', hl: ['c-ka-pcc', 'KM-PCC', 'KM-GEN'], s: { mode: 'GRID' } },
+    { ph: 3, t: c => SG.t(c.pcsResync ? 'scf.gb3resync' : 'scf.gb3break'), hl: ['PCS', 'CPU'] },
+    { ph: 4, t: c => SG.t(c.gen ? 'scf.gb4gen' : 'scf.gb4pcc'), hl: ['c-ka-pcc', 'KM-PCC', 'KM-GEN'], s: { mode: 'GRID' } },
     { ph: 5, t: 'KM_PCC_FB = 1; đồng hồ PCC đo P_GRID. Inverter PV kết nối lại sau trễ riêng của nó.', hl: ['d-kmpcc', 'PM-PCC'] },
     { ph: 6, t: 'HMI: đèn “Lưới”, tải không ưu tiên được phục hồi lần lượt.', hl: ['HMI'], s: { rlOn: 2 } }
   ],
@@ -180,5 +180,5 @@ KHÓA: KM_GEN và KM_PCC không bao giờ = 1 cùng lúc (cơ khí + điện + P
   KM_RL_CMD[*] := 0; KHOA_RL := 1; ALARM
   KHOA_RL chỉ giải trừ khi QF_RL_SD = 0 VÀ PB_RESET`
 },
-{ id: 'parallel', n: 'Vận hành song song máy phát–lưới', lock: () => 'Bị khóa trong kiến trúc tham chiếu: cần bộ hòa đồng bộ (ANSI 25), bảo vệ công suất ngược (32), bảo vệ tách lưới cho máy phát, bộ điều khiển chia tải, và thỏa thuận đấu nối với đơn vị điện lực. Mô hình chỉ cho phép chuyển nguồn (KM-PCC và KM-GEN khóa liên động).', steps: [], pseudo: '' }
+{ id: 'parallel', n: 'Vận hành song song máy phát–lưới', lock: () => SG.t('scf.lockPar'), steps: [], pseudo: '' }
 ];

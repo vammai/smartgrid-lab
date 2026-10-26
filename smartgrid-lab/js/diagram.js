@@ -1,21 +1,21 @@
 /* SƠ ĐỒ TƯƠNG TÁC — SVG thuần, dùng chung cho trang Sơ đồ, Kịch bản, Truyền thông, HMI. */
 SG.LAYERS = {
-  ac: { n: 'Công suất AC', w: 3.2, dash: '', arrow: false },
-  dc: { n: 'Công suất DC', w: 3.2, dash: '11 4', arrow: false },
-  aux: { n: 'Nguồn phụ trợ 24 VDC', w: 2, dash: '6 3', arrow: false },
-  di: { n: 'Tín hiệu số (DI/DO, trip)', w: 1.5, dash: '', arrow: true },
-  ai: { n: 'Tín hiệu analog / mạch đo', w: 1.6, dash: '2 3', arrow: true },
-  eth: { n: 'Ethernet', w: 2.4, dash: '', arrow: false },
-  rs485: { n: 'RS485', w: 2, dash: '9 3 2 3', arrow: false },
-  can: { n: 'CAN', w: 2, dash: '4 2', arrow: false },
-  wl: { n: 'Không dây', w: 1.8, dash: '1 5', arrow: false }
+  ac: { w: 3.2, dash: '', arrow: false },
+  dc: { w: 3.2, dash: '11 4', arrow: false },
+  aux: { w: 2, dash: '6 3', arrow: false },
+  di: { w: 1.5, dash: '', arrow: true },
+  ai: { w: 1.6, dash: '2 3', arrow: true },
+  eth: { w: 2.4, dash: '', arrow: false },
+  rs485: { w: 2, dash: '9 3 2 3', arrow: false },
+  can: { w: 2, dash: '4 2', arrow: false },
+  wl: { w: 1.8, dash: '1 5', arrow: false }
 };
 SG.VIEWS = {
-  power: { n: 'Công suất', on: ['ac', 'dc'], ghost: ['aux'] },
-  meas: { n: 'Đo lường', on: ['ai', 'eth', 'rs485', 'can', 'wl'], ghost: ['ac', 'dc'] },
-  ctrl: { n: 'Điều khiển', on: ['di', 'ai', 'aux'], ghost: ['ac', 'dc'] },
-  comm: { n: 'Truyền thông', on: ['eth', 'rs485', 'can', 'wl'], ghost: ['ac', 'dc'] },
-  all: { n: 'Tổng hợp', on: ['ac', 'dc', 'aux', 'di', 'ai', 'eth', 'rs485', 'can', 'wl'], ghost: [] }
+  power: { on: ['ac', 'dc'], ghost: ['aux'] },
+  meas: { on: ['ai', 'eth', 'rs485', 'can', 'wl'], ghost: ['ac', 'dc'] },
+  ctrl: { on: ['di', 'ai', 'aux'], ghost: ['ac', 'dc'] },
+  comm: { on: ['eth', 'rs485', 'can', 'wl'], ghost: ['ac', 'dc'] },
+  all: { on: ['ac', 'dc', 'aux', 'di', 'ai', 'eth', 'rs485', 'can', 'wl'], ghost: [] }
 };
 SG.CANVAS = { w: 1720, h: 1270 };
 
@@ -105,18 +105,18 @@ SG.Diagram = function (el, opt) {
 
   const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   const trunc = (s, n) => s.length > n ? s.slice(0, n - 1) + '…' : s;
-  const grpClass = d => { const g = SG.types[d.t].group; return /Nguồn|Lưu trữ/.test(g) ? 'src' : /Tải/.test(g) ? 'load' : /Đóng cắt|An toàn/.test(g) ? 'sw' : /Đo lường/.test(g) ? 'meas' : /Truyền thông|Giám sát/.test(g) ? 'comm' : /Phụ trợ/.test(g) ? 'aux' : /Phân phối/.test(g) ? 'bus' : 'ctrl'; };
+  const grpClass = d => SG.typeGroup(d.t);
 
   this.render = function () {
     const c = self.c; const v = SG.VIEWS[opt.view] || SG.VIEWS.all;
     const onL = opt.view === 'all' && opt.layers ? opt.layers : v.on;
     const ghost = opt.view === 'all' ? [] : v.ghost;
-    let s = `<svg xmlns="${NS}" class="dg" viewBox="${self.vb.x} ${self.vb.y} ${self.vb.w} ${self.vb.h}" role="img" aria-label="Sơ đồ hệ thống microgrid">`;
+    let s = `<svg xmlns="${NS}" class="dg" viewBox="${self.vb.x} ${self.vb.y} ${self.vb.w} ${self.vb.h}" role="img" aria-label="${SG.esc(SG.t('dg.aria'))}">`;
     s += '<defs>' + Object.keys(SG.LAYERS).map(k => `<marker id="ar-${k}-${self.uid}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" class="mk mk-${k}"/></marker>`).join('') + '</defs>';
     // zones
-    s += `<g class="zones"><rect x="10" y="400" width="1700" height="430" class="zone"/><text x="20" y="420" class="zone-t">VÙNG CÔNG SUẤT — các nhánh từ thanh cái</text>`;
-    s += `<rect x="10" y="836" width="1700" height="206" class="zone zone-lane"/><text x="20" y="852" class="zone-t">MÁNG CÁP — tín hiệu đi từ thiết bị về tủ điều khiển</text>`;
-    s += `<rect x="10" y="1044" width="1700" height="216" class="zone zone-ctrl"/><text x="20" y="1262" class="zone-t">VÙNG ĐIỀU KHIỂN, TRUYỀN THÔNG, GIÁM SÁT (vị trí chức năng, không phải bố trí tủ)</text></g>`;
+    s += `<g class="zones"><rect x="10" y="400" width="1700" height="430" class="zone"/><text x="20" y="420" class="zone-t">${SG.esc(SG.t('dg.zoneP'))}</text>`;
+    s += `<rect x="10" y="836" width="1700" height="206" class="zone zone-lane"/><text x="20" y="852" class="zone-t">${SG.esc(SG.t('dg.zoneL'))}</text>`;
+    s += `<rect x="10" y="1044" width="1700" height="216" class="zone zone-ctrl"/><text x="20" y="1262" class="zone-t">${SG.esc(SG.t('dg.zoneC'))}</text></g>`;
     // links
     const hl = self.hl;
     const vis = l => onL.includes(l.layer) ? 'on' : ghost.includes(l.layer) ? 'ghost' : null;
@@ -127,12 +127,12 @@ SG.Diagram = function (el, opt) {
       const d = 'M' + self.path[l.id].map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' L');
       const dim = hl && !hl.has(l.id) ? ' dim' : '', hot = hl && hl.has(l.id) ? ' hot' : '', sel = self.sel === l.id ? ' sel' : '';
       const mk = L.arrow ? ` marker-end="url(#ar-${l.layer}-${self.uid})"` : '';
-      s += `<g class="lk lk-${l.layer} ${st}${dim}${hot}${sel}" data-link="${l.id}"><path d="${d}" class="hit"/><path d="${d}" class="ln" stroke-width="${L.w}" stroke-dasharray="${L.dash}"${mk}/><title>${esc(L.n + ': ' + l.label)}</title></g>`;
+      s += `<g class="lk lk-${l.layer} ${st}${dim}${hot}${sel}" data-link="${l.id}"><path d="${d}" class="hit"/><path d="${d}" class="ln" stroke-width="${L.w}" stroke-dasharray="${L.dash}"${mk}/><title>${esc(SG.layerName(l.layer) + ': ' + l.label)}</title></g>`;
     });
     s += '</g>';
     // ports
     s += '<g class="ports">';
-    self.links.forEach(l => { const st = vis(l); if (st !== 'on' || l.a.d === 'BUS' && l.b.d === 'BUS') return; ['a', 'b'].forEach(k => { if (l[k].d === 'BUS') return; const p = self.pt[l.id + k]; const dim = hl && !hl.has(l.id) ? ' dim' : ''; s += `<circle cx="${p.x}" cy="${p.y}" r="2.6" class="pt pt-${l.layer}${dim}" data-port="${l.id}|${k}"><title>${esc((l[k].p || 'Cổng') + ' — ' + SG.LAYERS[l.layer].n)}</title></circle>`; }); });
+    self.links.forEach(l => { const st = vis(l); if (st !== 'on' || l.a.d === 'BUS' && l.b.d === 'BUS') return; ['a', 'b'].forEach(k => { if (l[k].d === 'BUS') return; const p = self.pt[l.id + k]; const dim = hl && !hl.has(l.id) ? ' dim' : ''; s += `<circle cx="${p.x}" cy="${p.y}" r="2.6" class="pt pt-${l.layer}${dim}" data-port="${l.id}|${k}"><title>${esc((l[k].p || SG.t('sheet.port')) + ' — ' + SG.layerName(l.layer))}</title></circle>`; }); });
     s += '</g>';
     // nodes
     s += '<g class="nodes">';
@@ -140,7 +140,7 @@ SG.Diagram = function (el, opt) {
       const n = self.node[d.id];
       const dim = hl && !hl.has(d.id) ? ' dim' : '', hot = hl && hl.has(d.id) ? ' hot' : '', sel = self.sel === d.id ? ' sel' : '';
       if (d.id === 'BUS') {
-        s += `<g class="nd bus${dim}${hot}${sel}" data-dev="BUS"><rect x="${n.x - n.w / 2}" y="${n.y - n.h / 2}" width="${n.w}" height="${n.h}" rx="2"/><text x="${n.x - n.w / 2 + 600}" y="${n.y - 9}" class="bus-t">THANH CÁI AC CHÍNH — ${c.U} V ${c.phases === 3 ? '3P+N' : '1P+N'} ${c.f} Hz</text><title>Thanh cái AC chính</title></g>`;
+        s += `<g class="nd bus${dim}${hot}${sel}" data-dev="BUS"><rect x="${n.x - n.w / 2}" y="${n.y - n.h / 2}" width="${n.w}" height="${n.h}" rx="2"/><text x="${n.x - n.w / 2 + 600}" y="${n.y - 9}" class="bus-t">${esc(SG.t('dg.bus', { U: c.U, ph: c.phases === 3 ? '3P+N' : '1P+N', f: c.f }))}</text><title>${esc(SG.dev('BUS').n)}</title></g>`;
         return;
       }
       const x = n.x - n.w / 2, y = n.y - n.h / 2;
@@ -152,7 +152,7 @@ SG.Diagram = function (el, opt) {
       if (d.lb > 1) s += `<g class="lbadge"><rect x="${x + n.w - 17}" y="${y + 3}" width="14" height="13" rx="3"/><text x="${x + n.w - 10}" y="${y + 13}">${d.lb}</text></g>`;
       if (st) s += `<g class="stb"><rect x="${x + n.w - 17}" y="${y + n.h - 15}" width="14" height="12" rx="2"/><text x="${x + n.w - 10}" y="${y + n.h - 6}">${st === 'on' ? 'I' : st === 'trip' ? '!' : 'O'}</text></g>`;
       if (self.values[d.id]) s += `<g class="val"><rect x="${x + n.w + 4}" y="${n.y - 9}" width="${self.values[d.id].length * 6.4 + 10}" height="17" rx="8"/><text x="${x + n.w + 9}" y="${n.y + 3}">${esc(self.values[d.id])}</text></g>`;
-      s += `<title>${esc(d.id + ' — ' + d.n + ' (' + SG.types[d.t].fr + ')')}</title></g>`;
+      s += `<title>${esc(d.id + ' — ' + d.n + ((a => a ? ' (' + a.t + ')' : '')(SG.typeAltShown(d.t))))}</title></g>`;
     });
     s += '</g>';
     // labels for highlighted links
